@@ -1,0 +1,39 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f2f5;
+  padding: 16px;
+}
+
+.chat-container {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 32px);
+  margin: 0 auto;
+}
+
+.chat-container > * {
+  flex: 1;
+  max-width: 50%;
+  padding: 0 12px;
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .chat-container > * {
+    max-width: 100%;
+    height: calc(100vh - 32px);
+    padding: 8px;
+  }
+  
+  .app {
+    padding: 8px;
+    height: auto;
+  }
+} 

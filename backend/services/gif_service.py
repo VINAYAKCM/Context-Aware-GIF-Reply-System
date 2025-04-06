@@ -60,23 +60,28 @@ class GIFService:
         """
         # Map BERT sentiment labels to search terms
         sentiment_mapping = {
-            'POSITIVE': ['reaction', 'dance', 'celebration', 'excited'],
-            'NEGATIVE': ['reaction', 'sad', 'cry', 'disappointed'],
-            'NEUTRAL': ['reaction', 'nod', 'shrug', 'okay']
+            'POSITIVE': ['happy', 'excited', 'joy', 'celebration', 'awesome', 'great', 'love', 'yes'],
+            'NEGATIVE': ['sad', 'upset', 'disappointed', 'sorry', 'no', 'worried', 'angry'],
+            'NEUTRAL': ['okay', 'hmm', 'interesting', 'thinking', 'maybe']
         }
         
         # Get sentiment keywords
-        sentiment_keywords = sentiment_mapping.get(sentiment, ['reaction'])
+        sentiment_keywords = sentiment_mapping.get(sentiment, ['neutral'])
         
         # Extract key terms from text (simple word-based approach)
         words = text.lower().split()
-        # Filter out common words and focus on action/emotion words
-        common_words = {'this', 'is', 'that', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
-        key_terms = [word for word in words if len(word) > 3 and word not in common_words][:2]
+        # Filter out common words and focus on meaningful words
+        common_words = {'this', 'is', 'that', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'am', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had'}
+        key_terms = [word for word in words if len(word) > 2 and word not in common_words][:3]  # Take up to 3 significant words
         
-        # Combine text with sentiment, prioritizing visual content
-        search_terms = [sentiment_keywords[0]] + key_terms
-        search_query = " ".join(search_terms)
+        # If we have meaningful words from the text, prioritize them
+        if key_terms:
+            search_terms = key_terms + [sentiment_keywords[0]]
+        else:
+            # If no meaningful words, use sentiment-based search
+            search_terms = [sentiment_keywords[0], sentiment_keywords[1] if len(sentiment_keywords) > 1 else '']
+        
+        search_query = " ".join(filter(None, search_terms))
         logger.info(f"Generated search query: {search_query}")
         return search_query
     
@@ -143,21 +148,21 @@ class GIFService:
             # Get text embedding
             text_embedding = self.sentence_transformer.encode(text)
             
-            # Calculate similarity scores with visual content bias
+            # Calculate similarity scores
             ranked_gifs = []
             for gif in gifs:
                 gif_title = gif.get('title', '')
                 
-                # Penalize GIFs with text-heavy titles
+                # Less aggressive text penalty
                 title_words = gif_title.lower().split()
-                text_penalty = sum(1 for word in title_words if len(word) > 3) / max(len(title_words), 1)
+                text_penalty = sum(1 for word in title_words if word.isupper()) / max(len(title_words), 1)
                 
                 gif_embedding = self.sentence_transformer.encode(gif_title)
                 similarity = float(np.dot(text_embedding, gif_embedding) / 
                                 (np.linalg.norm(text_embedding) * np.linalg.norm(gif_embedding)))
                 
-                # Adjust score to favor visual content
-                adjusted_score = similarity * (1 - text_penalty * 0.3)  # Reduce score for text-heavy titles
+                # Adjust score with a gentler penalty
+                adjusted_score = similarity * (1 - text_penalty * 0.15)  # Reduced penalty factor
                 
                 ranked_gifs.append({
                     'id': gif.get('id'),
