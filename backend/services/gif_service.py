@@ -134,19 +134,58 @@ class GifService:
         }
 
     async def search_gifs(self, query: str) -> List[Dict[str, Any]]:
-        """Direct GIF search without reply generation."""
-        # For direct search, just use the query as is
-        gifs = await self._search_giphy(query)
-        
-        # Rank GIFs but without context/adjectives
-        ranked_gifs = self._rank_gifs_by_relevance(
-            query,
-            gifs,
-            context_words=[],  # No context words for direct search
-            adjectives=[]      # No adjectives for direct search
-        )
-        
-        return ranked_gifs[:6]  # Return top 6 GIFs
+        """Direct search with enhanced query generation and sentiment analysis."""
+        try:
+            # Analyze sentiment
+            sentiment_result = self.sentiment_analyzer(query)[0]
+            sentiment = sentiment_result['label']
+            
+            # Generate enhanced search query
+            enhanced_query = self._generate_search_query(query, sentiment)
+            logger.info(f"Enhanced search query: {enhanced_query}")
+            
+            # Search with both original and enhanced queries
+            original_gifs = await self._search_giphy(query, limit=5)
+            enhanced_gifs = await self._search_giphy(enhanced_query, limit=5)
+            
+            # Combine and deduplicate results
+            all_gifs = []
+            seen_ids = set()
+            
+            for gif_list in [original_gifs, enhanced_gifs]:
+                for gif in gif_list:
+                    if gif['id'] not in seen_ids:
+                        all_gifs.append(gif)
+                        seen_ids.add(gif['id'])
+            
+            # Extract key terms for context
+            words = query.lower().split()
+            common_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
+            context_words = [word for word in words if word not in common_words]
+            
+            # Get sentiment-based adjectives
+            sentiment_adjectives = {
+                'POSITIVE': ['happy', 'excited', 'joyful'],
+                'NEGATIVE': ['sad', 'upset', 'disappointed'],
+                'NEUTRAL': ['calm', 'neutral', 'steady']
+            }.get(sentiment, [])
+            
+            # Rank GIFs with enhanced context
+            ranked_gifs = self._rank_gifs_by_relevance(
+                query,
+                all_gifs,
+                context_words=context_words,
+                adjectives=sentiment_adjectives
+            )
+            
+            logger.info(f"Found {len(ranked_gifs)} GIFs for query: {query}")
+            return ranked_gifs[:6]  # Return top 6 GIFs
+            
+        except Exception as e:
+            logger.error(f"Error in enhanced GIF search: {str(e)}")
+            # Fallback to basic search if enhancement fails
+            gifs = await self._search_giphy(query)
+            return self._rank_gifs_by_relevance(query, gifs, [], [])[:6]
 
     def _generate_search_query(self, text: str, sentiment: str) -> str:
         """

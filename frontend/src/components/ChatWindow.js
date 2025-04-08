@@ -24,6 +24,7 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
     if (message.trim()) {
       onSendMessage(message);
       setMessage('');
+      setShowGifPanel(false);
       setDebugInfo(null);
     }
   };
@@ -58,10 +59,12 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
 
   const handleGifClick = async () => {
     if (!showGifPanel) {
-      // If text is empty, use last received message for context
-      const context = message.trim() || lastReceivedMessage;
-      if (context) {
-        await fetchGifs(context, 'reply');
+      if (message.trim()) {
+        // If text in textbar, show GIFs representing that text
+        await fetchGifs(message.trim(), 'search');
+      } else {
+        // If textbar empty, show reply GIFs based on last received message
+        await fetchGifs(lastReceivedMessage, 'reply');
       }
     }
     setShowGifPanel(!showGifPanel);
@@ -70,7 +73,7 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
   const handleGifSearch = async (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      await fetchGifs(searchQuery, 'search');
+      await fetchGifs(searchQuery.trim(), 'search');
     }
   };
 
@@ -84,7 +87,7 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
     } else {
       setDebugInfo(null);
       if (searchQuery.trim()) {
-        await fetchGifs(searchQuery, 'search');
+        await fetchGifs(searchQuery.trim(), 'search');
       }
     }
   };
@@ -114,7 +117,13 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
           <input
             type="text"
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (showGifPanel && e.target.value.trim()) {
+                // Update GIFs as user types if GIF panel is open
+                fetchGifs(e.target.value.trim(), 'search');
+              }
+            }}
             placeholder="Type a message..."
             className="message-input"
           />
@@ -192,7 +201,8 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
                       onClick={() => {
                         onSendGif(gif.url);
                         setShowGifPanel(false);
-                        setDebugInfo(null);
+                        setMessage('');
+                        setSearchQuery('');
                       }}
                     />
                     {gif.similarity && (
