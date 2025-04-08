@@ -5,6 +5,29 @@ from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
+SYSTEM_PROMPT = """You are a helpful chat assistant that generates natural, conversational replies.
+Generate 3 different casual, friendly responses that a person might say in a chat conversation.
+Your responses should be brief and natural, like how friends text each other.
+
+When responding to requests or questions:
+1. Include a clear agreement/okay ("Sure!", "Of course!", "Will do!") or disagreement/no ("Sorry can't", "Not possible", "Maybe later")
+2. Then optionally add a follow-up question or comment
+3. Keep the tone casual and friendly
+
+Examples for agreement:
+- "Sure thing! When do you need it?"
+- "Of course I can! Where is it?"
+- "Will do! Is it urgent?"
+
+Examples for disagreement:
+- "Sorry, can't right now. Maybe later?"
+- "Not today, I'm busy"
+- "That won't work for me"
+
+Keep responses short, natural and conversational.
+The replies you generate are used for searching gifs, so remember, the replies need to be short.
+"""
+
 class ReplyService:
     def __init__(self):
         self.ollama_url = "http://localhost:11434/api/generate"
@@ -13,10 +36,11 @@ class ReplyService:
     async def _generate_replies(self, message: str, num_replies: int = 3) -> List[str]:
         """Generate contextual replies using Llama 3.2."""
         prompt = (
-            "You are having a casual conversation with a friend. Generate 3 natural, friendly responses as if you're chatting.\n\n"
+            SYSTEM_PROMPT + "\n\n"
             f"Friend: \"{message}\"\n\n"
             "Your responses should be casual and conversational, like how a real person would reply. "
-            "Format as JSON array. Example: [\"Hey, what's up! 😊\", \"Having a good day?\", \"Tell me more!\"]\n\n"
+            "For invitations or suggestions, always start with a clear yes/no or show enthusiasm first.\n\n"
+            "Format as JSON array. Example: [\"Yes, absolutely! What time?\", \"That sounds fun! Where at?\", \"Yeah I'm down! Should we grab food first?\"]\n\n"
             "Only output the JSON array, nothing else."
         )
 
@@ -71,18 +95,23 @@ class ReplyService:
 
         # Generate context and adjectives for each reply
         contexts_prompt = (
-            "You are helping understand the emotional context of a conversation.\n\n"
+            "You are helping understand if responses indicate agreement or disagreement.\n\n"
             f"Message: \"{message}\"\n"
             f"Replies: {json.dumps(replies)}\n\n"
-            "Extract key words that describe the situation and emotional tone. Format as JSON:\n"
+            "Extract the context (agreement/disagreement) and emotional tone. Format as JSON:\n"
             "{\n"
-            "  \"contexts\": [\"key situation words\"],\n"
+            "  \"contexts\": [\"agreement\" or \"disagreement\"],\n"
             "  \"adjectives\": [\"emotional tone words\"]\n"
             "}\n"
-            "Example for 'I just got promoted!': \n"
+            "Example for 'Can you help me move?': \n"
             "{\n"
-            "  \"contexts\": [\"celebration\", \"achievement\", \"career\"],\n"
-            "  \"adjectives\": [\"excited\", \"proud\", \"happy\"]\n"
+            "  \"contexts\": [\"agreement\"],\n"
+            "  \"adjectives\": [\"helpful\", \"willing\"]\n"
+            "}\n"
+            "Example for 'I can't make it today': \n"
+            "{\n"
+            "  \"contexts\": [\"disagreement\"],\n"
+            "  \"adjectives\": [\"regretful\", \"apologetic\"]\n"
             "}\n\n"
             "Only output the JSON object for the current message."
         )
