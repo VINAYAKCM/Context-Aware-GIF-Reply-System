@@ -173,14 +173,6 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
                   </ul>
                 </div>
                 <div className="debug-section">
-                  <h4>Context:</h4>
-                  <p>{debugInfo.contexts.join(', ')}</p>
-                </div>
-                <div className="debug-section">
-                  <h4>Emotions:</h4>
-                  <p>{debugInfo.adjectives.join(', ')}</p>
-                </div>
-                <div className="debug-section">
                   <h4>Search Query:</h4>
                   <p>{debugInfo.search_query}</p>
                 </div>

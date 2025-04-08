@@ -106,25 +106,22 @@ class GifService:
                 'debug_info': {
                     'input_text': text,
                     'replies': [],
-                    'contexts': [],
-                    'adjectives': [],
                     'search_query': text
                 }
             }
 
-        # Combine context words and adjectives for search
-        search_terms = analysis['contexts'] + analysis['adjectives']
-        search_query = ' '.join(search_terms[:3]) if search_terms else text
+        # Use the first generated reply as the search query
+        search_query = analysis['replies'][0]
         
-        # Search for GIFs
+        # Search for GIFs using the generated reply
         gifs = await self._search_giphy(search_query)
         
-        # Rank GIFs using context
+        # Rank GIFs using the reply text
         ranked_gifs = self._rank_gifs_by_relevance(
-            text,
+            search_query,
             gifs,
-            analysis['contexts'],
-            analysis['adjectives']
+            [],  # No context words needed
+            []   # No adjectives needed
         )
 
         return {
@@ -132,35 +129,22 @@ class GifService:
             'debug_info': {
                 'input_text': text,
                 'replies': analysis['replies'],
-                'contexts': analysis['contexts'],
-                'adjectives': analysis['adjectives'],
                 'search_query': search_query
             }
         }
 
     async def search_gifs(self, query: str) -> List[Dict[str, Any]]:
         """Direct GIF search without reply generation."""
+        # For direct search, just use the query as is
         gifs = await self._search_giphy(query)
-        ranked_gifs = []
         
-        if gifs:
-            # For direct search, just use basic similarity ranking
-            text_embedding = self.model.encode([query])[0]
-            
-            for gif in gifs:
-                title = gif.get('title', '').lower()
-                title_embedding = self.model.encode([title])[0]
-                similarity = float(np.dot(text_embedding, title_embedding))
-                
-                ranked_gifs.append({
-                    'id': gif['id'],
-                    'url': gif['images']['original']['url'],
-                    'preview': gif['images']['fixed_height']['url'],
-                    'title': gif['title'],
-                    'similarity': similarity
-                })
-            
-            ranked_gifs.sort(key=lambda x: x['similarity'], reverse=True)
+        # Rank GIFs but without context/adjectives
+        ranked_gifs = self._rank_gifs_by_relevance(
+            query,
+            gifs,
+            context_words=[],  # No context words for direct search
+            adjectives=[]      # No adjectives for direct search
+        )
         
         return ranked_gifs[:6]  # Return top 6 GIFs
 
