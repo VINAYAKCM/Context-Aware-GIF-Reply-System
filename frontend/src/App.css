@@ -1,16 +1,19 @@
 .app {
   min-height: 100vh;
+  padding: 20px;
+  background-color: #f0f2f5;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f0f2f5;
-  padding: 16px;
 }
 
 .chat-container {
-  display: flex;
   width: 100%;
-  height: calc(100vh - 32px);
+  max-width: 1400px;
+  height: 90vh;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
   margin: 0 auto;
 }
 
@@ -20,12 +23,15 @@
   padding: 0 12px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .chat-container {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     height: auto;
+    min-height: 90vh;
   }
-  
+}
+
+@media (max-width: 768px) {
   .chat-container > * {
     max-width: 100%;
     height: calc(100vh - 32px);

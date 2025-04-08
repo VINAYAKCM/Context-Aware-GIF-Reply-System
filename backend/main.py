@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 from typing import List, Dict
 import json
-from services.gif_service import GIFService
+from services.gif_service import GifService
 from pydantic import BaseModel
 
 # Load environment variables
@@ -33,12 +33,12 @@ sio = socketio.AsyncServer(
 socket_app = socketio.ASGIApp(sio, app)
 
 # Initialize GIF service
-gif_service = GIFService()
+gif_service = GifService(api_key=os.getenv('GIPHY_API_KEY'))
 
 # Store active users and their connections
 active_users: Dict[str, str] = {}
 
-class MessageRequest(BaseModel):
+class TextRequest(BaseModel):
     text: str
 
 @app.get("/")
@@ -46,20 +46,22 @@ async def root():
     return {"message": "Context-Aware GIF Reply System API"}
 
 @app.post("/api/gif-suggestions")
-async def get_gif_suggestions(request: MessageRequest):
-    try:
-        suggestions = await gif_service.get_gif_suggestions(request.text)
-        return suggestions
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def get_gif_suggestions(request: TextRequest):
+    """Get GIF suggestions based on text analysis and generated replies."""
+    if not request.text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    
+    result = await gif_service.get_gif_suggestions(request.text)
+    return result
 
 @app.post("/api/search-gifs")
-async def search_gifs(request: MessageRequest):
-    try:
-        gifs = await gif_service.search_gifs_manual(request.text)
-        return gifs
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def search_gifs(request: TextRequest):
+    """Direct GIF search without reply generation."""
+    if not request.text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    
+    gifs = await gif_service.search_gifs(request.text)
+    return gifs[:6]  # Limit to 6 GIFs for consistency
 
 @sio.event
 async def connect(sid, environ):

@@ -1,40 +1,45 @@
 import React, { useState } from 'react';
-import ChatWindow from './components/ChatWindow';
 import './App.css';
+import ChatWindow from './components/ChatWindow';
 
 function App() {
-  const [user1Messages, setUser1Messages] = useState([]);
-  const [user2Messages, setUser2Messages] = useState([]);
+  const [messages1, setMessages1] = useState([]);
+  const [messages2, setMessages2] = useState([]);
+  const [lastReceivedMessage1, setLastReceivedMessage1] = useState('');
+  const [lastReceivedMessage2, setLastReceivedMessage2] = useState('');
 
-  const handleUser1Message = (message) => {
-    const newMessage = { sender: 'User 1', content: message, type: 'text' };
-    setUser1Messages([...user1Messages, newMessage]);
-    setUser2Messages([...user2Messages, newMessage]);
+  const handleSendMessage = (windowId, message) => {
+    const newMessage = {
+      content: message,
+      sender: windowId === 1 ? 'User 1' : 'User 2',
+      type: 'text'
+    };
+
+    if (windowId === 1) {
+      setMessages1([...messages1, newMessage]);
+      setMessages2([...messages2, { ...newMessage, sender: 'User 1' }]);
+      setLastReceivedMessage2(message);
+    } else {
+      setMessages2([...messages2, newMessage]);
+      setMessages1([...messages1, { ...newMessage, sender: 'User 2' }]);
+      setLastReceivedMessage1(message);
+    }
   };
 
-  const handleUser2Message = (message) => {
-    const newMessage = { sender: 'User 2', content: message, type: 'text' };
-    setUser1Messages([...user1Messages, newMessage]);
-    setUser2Messages([...user2Messages, newMessage]);
-  };
+  const handleSendGif = (windowId, gifUrl) => {
+    const newMessage = {
+      content: gifUrl,
+      sender: windowId === 1 ? 'User 1' : 'User 2',
+      type: 'gif'
+    };
 
-  const handleUser1Gif = (gifUrl) => {
-    const newMessage = { sender: 'User 1', content: gifUrl, type: 'gif' };
-    setUser1Messages([...user1Messages, newMessage]);
-    setUser2Messages([...user2Messages, newMessage]);
-  };
-
-  const handleUser2Gif = (gifUrl) => {
-    const newMessage = { sender: 'User 2', content: gifUrl, type: 'gif' };
-    setUser1Messages([...user1Messages, newMessage]);
-    setUser2Messages([...user2Messages, newMessage]);
-  };
-
-  const getLastReceivedMessage = (user, messages) => {
-    const lastMessage = messages
-      .filter(msg => msg.sender !== user)
-      .slice(-1)[0];
-    return lastMessage?.content || '';
+    if (windowId === 1) {
+      setMessages1([...messages1, newMessage]);
+      setMessages2([...messages2, { ...newMessage, sender: 'User 1' }]);
+    } else {
+      setMessages2([...messages2, newMessage]);
+      setMessages1([...messages1, { ...newMessage, sender: 'User 2' }]);
+    }
   };
 
   return (
@@ -42,17 +47,17 @@ function App() {
       <div className="chat-container">
         <ChatWindow
           user="User 1"
-          messages={user1Messages}
-          onSendMessage={handleUser1Message}
-          onSendGif={handleUser1Gif}
-          lastReceivedMessage={getLastReceivedMessage('User 1', user1Messages)}
+          messages={messages1}
+          onSendMessage={(message) => handleSendMessage(1, message)}
+          onSendGif={(gifUrl) => handleSendGif(1, gifUrl)}
+          lastReceivedMessage={lastReceivedMessage1}
         />
         <ChatWindow
           user="User 2"
-          messages={user2Messages}
-          onSendMessage={handleUser2Message}
-          onSendGif={handleUser2Gif}
-          lastReceivedMessage={getLastReceivedMessage('User 2', user2Messages)}
+          messages={messages2}
+          onSendMessage={(message) => handleSendMessage(2, message)}
+          onSendGif={(gifUrl) => handleSendGif(2, gifUrl)}
+          lastReceivedMessage={lastReceivedMessage2}
         />
       </div>
     </div>

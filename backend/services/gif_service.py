@@ -1,11 +1,13 @@
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import requests
 from dotenv import load_dotenv
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import logging
+import aiohttp
+from .reply_service import ReplyService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,8 +15,12 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-class GIFService:
-    def __init__(self):
+class GifService:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.giphy_url = "https://api.giphy.com/v1/gifs/search"
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.reply_service = ReplyService()
         self.giphy_api_key = os.getenv('GIPHY_API_KEY')
         if not self.giphy_api_key:
             raise ValueError("GIPHY_API_KEY environment variable is not set")
@@ -25,35 +31,139 @@ class GIFService:
         self.sentence_transformer = SentenceTransformer('all-MiniLM-L6-v2')
         logger.info("GIF Service initialized successfully")
         
-    async def get_gif_suggestions(self, text: str, limit: int = 5) -> List[Dict]:
-        """
-        Get GIF suggestions based on text analysis
-        """
+    async def _search_giphy(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search GIPHY API with the given query."""
         try:
-            logger.info(f"Analyzing sentiment for text: {text}")
-            # Analyze sentiment
-            sentiment_result = self.sentiment_analyzer(text)[0]
-            sentiment = sentiment_result['label']
-            logger.info(f"Detected sentiment: {sentiment}")
-            
-            # Generate search query based on sentiment and text
-            search_query = self._generate_search_query(text, sentiment)
-            logger.info(f"Generated search query: {search_query}")
-            
-            # Search GIPHY API
-            gifs = await self._search_giphy(search_query, limit)
-            logger.info(f"Found {len(gifs)} GIFs from GIPHY")
-            
-            # Rank GIFs by relevance
-            ranked_gifs = self._rank_gifs_by_relevance(gifs, text)
-            logger.info(f"Ranked {len(ranked_gifs)} GIFs by relevance")
-            
-            return ranked_gifs
-            
+            async with aiohttp.ClientSession() as session:
+                params = {
+                    'api_key': self.api_key,
+                    'q': query,
+                    'limit': limit,
+                    'rating': 'g'
+                }
+                
+                async with session.get(self.giphy_url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return data.get('data', [])
+                    else:
+                        logger.error(f"GIPHY API error: {response.status}")
+                        return []
         except Exception as e:
-            logger.error(f"Error getting GIF suggestions: {str(e)}")
+            logger.error(f"Error searching GIPHY: {str(e)}")
             return []
-    
+
+    def _rank_gifs_by_relevance(self, text: str, gifs: List[Dict[str, Any]], context_words: List[str], adjectives: List[str]) -> List[Dict[str, Any]]:
+        """Rank GIFs by relevance using context words and adjectives."""
+        if not gifs:
+            return []
+
+        # Combine text with context words and adjectives for better matching
+        enhanced_text = f"{text} {' '.join(context_words)} {' '.join(adjectives)}"
+        text_embedding = self.model.encode([enhanced_text])[0]
+        
+        ranked_gifs = []
+        for gif in gifs:
+            title = gif.get('title', '').lower()
+            
+            # Calculate base similarity
+            title_embedding = self.model.encode([title])[0]
+            similarity = np.dot(text_embedding, title_embedding)
+            
+            # Boost score if title contains context words or adjectives
+            context_boost = sum(1 for word in context_words if word.lower() in title) * 0.1
+            adjective_boost = sum(1 for adj in adjectives if adj.lower() in title) * 0.15
+            
+            # Small penalty for ALL CAPS titles (likely promotional)
+            caps_penalty = 0.15 if title.isupper() else 0
+            
+            final_score = similarity + context_boost + adjective_boost - caps_penalty
+            
+            ranked_gifs.append({
+                'id': gif['id'],
+                'url': gif['images']['original']['url'],
+                'preview': gif['images']['fixed_height']['url'],
+                'title': gif['title'],
+                'similarity': float(final_score)
+            })
+        
+        return sorted(ranked_gifs, key=lambda x: x['similarity'], reverse=True)
+
+    async def get_gif_suggestions(self, text: str) -> Dict[str, Any]:
+        """Get GIF suggestions based on message analysis and generated replies."""
+        # Analyze message and generate replies
+        analysis = await self.reply_service.analyze_message(text)
+        
+        # Log the analysis results
+        logger.info(f"Message analysis: {analysis}")
+        
+        if not analysis['replies']:
+            logger.warning("No replies generated, falling back to direct search")
+            gifs = await self._search_giphy(text)
+            ranked_gifs = self._rank_gifs_by_relevance(text, gifs, [], [])
+            return {
+                'gifs': ranked_gifs[:6],
+                'debug_info': {
+                    'input_text': text,
+                    'replies': [],
+                    'contexts': [],
+                    'adjectives': [],
+                    'search_query': text
+                }
+            }
+
+        # Combine context words and adjectives for search
+        search_terms = analysis['contexts'] + analysis['adjectives']
+        search_query = ' '.join(search_terms[:3]) if search_terms else text
+        
+        # Search for GIFs
+        gifs = await self._search_giphy(search_query)
+        
+        # Rank GIFs using context
+        ranked_gifs = self._rank_gifs_by_relevance(
+            text,
+            gifs,
+            analysis['contexts'],
+            analysis['adjectives']
+        )
+
+        return {
+            'gifs': ranked_gifs[:6],
+            'debug_info': {
+                'input_text': text,
+                'replies': analysis['replies'],
+                'contexts': analysis['contexts'],
+                'adjectives': analysis['adjectives'],
+                'search_query': search_query
+            }
+        }
+
+    async def search_gifs(self, query: str) -> List[Dict[str, Any]]:
+        """Direct GIF search without reply generation."""
+        gifs = await self._search_giphy(query)
+        ranked_gifs = []
+        
+        if gifs:
+            # For direct search, just use basic similarity ranking
+            text_embedding = self.model.encode([query])[0]
+            
+            for gif in gifs:
+                title = gif.get('title', '').lower()
+                title_embedding = self.model.encode([title])[0]
+                similarity = float(np.dot(text_embedding, title_embedding))
+                
+                ranked_gifs.append({
+                    'id': gif['id'],
+                    'url': gif['images']['original']['url'],
+                    'preview': gif['images']['fixed_height']['url'],
+                    'title': gif['title'],
+                    'similarity': similarity
+                })
+            
+            ranked_gifs.sort(key=lambda x: x['similarity'], reverse=True)
+        
+        return ranked_gifs[:6]  # Return top 6 GIFs
+
     def _generate_search_query(self, text: str, sentiment: str) -> str:
         """
         Generate a search query based on text and sentiment
@@ -84,102 +194,6 @@ class GIFService:
         search_query = " ".join(filter(None, search_terms))
         logger.info(f"Generated search query: {search_query}")
         return search_query
-    
-    async def _search_giphy(self, query: str, limit: int) -> List[Dict]:
-        """
-        Search GIPHY API for GIFs
-        """
-        try:
-            url = "https://api.giphy.com/v1/gifs/search"
-            params = {
-                'api_key': self.giphy_api_key,
-                'q': query,
-                'limit': limit,
-                'rating': 'g',
-                'lang': 'en'
-            }
-            
-            logger.info(f"Sending request to GIPHY API with query: {query}")
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            
-            data = response.json()
-            logger.info(f"GIPHY API response status: {response.status_code}")
-            
-            # Process and format GIF data
-            gifs = []
-            for gif in data.get('data', []):
-                images = gif.get('images', {})
-                # Use downsized_large for better quality while maintaining reasonable size
-                gif_data = {
-                    'id': gif.get('id'),
-                    'url': (
-                        images.get('downsized_large', {}).get('url') or  # Primary choice
-                        images.get('downsized_medium', {}).get('url') or  # Fallback 1
-                        images.get('downsized', {}).get('url') or  # Fallback 2
-                        images.get('original', {}).get('url')  # Final fallback
-                    ),
-                    'title': gif.get('title', ''),
-                    'preview': (
-                        images.get('fixed_width_still', {}).get('url') or  # Primary choice for preview
-                        images.get('fixed_height_still', {}).get('url')  # Fallback
-                    )
-                }
-                if gif_data['url']:  # Only add if URL exists
-                    gifs.append(gif_data)
-            
-            logger.info(f"Processed {len(gifs)} GIFs from GIPHY response")
-            return gifs
-            
-        except Exception as e:
-            logger.error(f"Error searching GIPHY: {str(e)}")
-            if hasattr(e, 'response'):
-                logger.error(f"GIPHY API response: {e.response.text}")
-            return []
-    
-    def _rank_gifs_by_relevance(self, gifs: List[Dict], text: str) -> List[Dict]:
-        """
-        Rank GIFs by relevance to the input text using sentence embeddings
-        """
-        if not gifs:
-            return []
-            
-        try:
-            # Get text embedding
-            text_embedding = self.sentence_transformer.encode(text)
-            
-            # Calculate similarity scores
-            ranked_gifs = []
-            for gif in gifs:
-                gif_title = gif.get('title', '')
-                
-                # Less aggressive text penalty
-                title_words = gif_title.lower().split()
-                text_penalty = sum(1 for word in title_words if word.isupper()) / max(len(title_words), 1)
-                
-                gif_embedding = self.sentence_transformer.encode(gif_title)
-                similarity = float(np.dot(text_embedding, gif_embedding) / 
-                                (np.linalg.norm(text_embedding) * np.linalg.norm(gif_embedding)))
-                
-                # Adjust score with a gentler penalty
-                adjusted_score = similarity * (1 - text_penalty * 0.15)  # Reduced penalty factor
-                
-                ranked_gifs.append({
-                    'id': gif.get('id'),
-                    'url': gif.get('url'),
-                    'preview': gif.get('preview'),
-                    'title': gif_title,
-                    'similarity_score': adjusted_score
-                })
-            
-            # Sort by adjusted similarity score
-            ranked_gifs.sort(key=lambda x: x['similarity_score'], reverse=True)
-            logger.info(f"Ranked {len(ranked_gifs)} GIFs, top score: {ranked_gifs[0]['similarity_score'] if ranked_gifs else 'N/A'}")
-            return ranked_gifs
-            
-        except Exception as e:
-            logger.error(f"Error ranking GIFs: {str(e)}")
-            return gifs  # Return unranked GIFs if ranking fails
     
     async def search_gifs_manual(self, query: str, limit: int = 10) -> List[Dict]:
         """

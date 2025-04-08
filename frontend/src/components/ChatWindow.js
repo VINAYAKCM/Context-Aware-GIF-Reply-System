@@ -6,6 +6,9 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
   const [showGifPanel, setShowGifPanel] = useState(false);
   const [gifs, setGifs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debugInfo, setDebugInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestionType, setSuggestionType] = useState('reply'); // 'reply' or 'search'
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -21,6 +24,35 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
     if (message.trim()) {
       onSendMessage(message);
       setMessage('');
+      setDebugInfo(null);
+    }
+  };
+
+  const fetchGifs = async (text, type = 'reply') => {
+    setIsLoading(true);
+    try {
+      const endpoint = type === 'reply' ? 'gif-suggestions' : 'search-gifs';
+      const response = await fetch(`http://localhost:8000/api/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+      const data = await response.json();
+      
+      if (type === 'reply') {
+        setGifs(data.gifs || []);
+        setDebugInfo(data.debug_info || null);
+      } else {
+        setGifs(data || []);
+        setDebugInfo(null);
+      }
+    } catch (error) {
+      console.error('Error fetching GIFs:', error);
+      setDebugInfo({ error: error.message });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -29,20 +61,7 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
       // If text is empty, use last received message for context
       const context = message.trim() || lastReceivedMessage;
       if (context) {
-        try {
-          const response = await fetch('http://localhost:8000/api/gif-suggestions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text: context }),
-          });
-          const data = await response.json();
-          // Limit to exactly 6 GIFs
-          setGifs(data.slice(0, 6));
-        } catch (error) {
-          console.error('Error fetching GIFs:', error);
-        }
+        await fetchGifs(context, 'reply');
       }
     }
     setShowGifPanel(!showGifPanel);
@@ -51,19 +70,21 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
   const handleGifSearch = async (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      try {
-        const response = await fetch('http://localhost:8000/api/search-gifs', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text: searchQuery }),
-        });
-        const data = await response.json();
-        // Limit to exactly 6 GIFs
-        setGifs(data.slice(0, 6));
-      } catch (error) {
-        console.error('Error searching GIFs:', error);
+      await fetchGifs(searchQuery, 'search');
+    }
+  };
+
+  const handleSuggestionTypeChange = async (type) => {
+    setSuggestionType(type);
+    if (type === 'reply') {
+      const context = message.trim() || lastReceivedMessage;
+      if (context) {
+        await fetchGifs(context, 'reply');
+      }
+    } else {
+      setDebugInfo(null);
+      if (searchQuery.trim()) {
+        await fetchGifs(searchQuery, 'search');
       }
     }
   };
@@ -100,7 +121,7 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
           <button
             type="button"
             onClick={handleGifClick}
-            className="gif-button"
+            className={`gif-button ${showGifPanel ? 'active' : ''}`}
           >
             GIF
           </button>
@@ -110,33 +131,87 @@ const ChatWindow = ({ user, messages, onSendMessage, onSendGif, lastReceivedMess
         </form>
         {showGifPanel && (
           <div className="gif-panel">
-            <form onSubmit={handleGifSearch} className="gif-search-form">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search GIFs..."
-                className="gif-search-input"
-              />
-              <button type="submit" className="search-button">
-                Search
-              </button>
-            </form>
-            <div className="gif-grid">
-              {gifs.map((gif, index) => (
-                <div key={index} className="gif-container">
-                  <img
-                    src={gif.url}  // Using the full GIF URL instead of preview
-                    alt="GIF"
-                    className="gif-thumbnail"
-                    onClick={() => {
-                      onSendGif(gif.url);
-                      setShowGifPanel(false);
-                    }}
+            <div className="gif-panel-header">
+              <div className="suggestion-type-toggle">
+                <button
+                  className={`toggle-button ${suggestionType === 'reply' ? 'active' : ''}`}
+                  onClick={() => handleSuggestionTypeChange('reply')}
+                >
+                  Reply GIFs
+                </button>
+                <button
+                  className={`toggle-button ${suggestionType === 'search' ? 'active' : ''}`}
+                  onClick={() => handleSuggestionTypeChange('search')}
+                >
+                  Search GIFs
+                </button>
+              </div>
+              {suggestionType === 'search' && (
+                <form onSubmit={handleGifSearch} className="gif-search-form">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search GIFs..."
+                    className="gif-search-input"
                   />
-                </div>
-              ))}
+                  <button type="submit" className="search-button">
+                    Search
+                  </button>
+                </form>
+              )}
             </div>
+            
+            {debugInfo && suggestionType === 'reply' && (
+              <div className="debug-info">
+                <div className="debug-section">
+                  <h4>Generated Replies:</h4>
+                  <ul>
+                    {debugInfo.replies.map((reply, index) => (
+                      <li key={index}>{reply}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="debug-section">
+                  <h4>Context:</h4>
+                  <p>{debugInfo.contexts.join(', ')}</p>
+                </div>
+                <div className="debug-section">
+                  <h4>Emotions:</h4>
+                  <p>{debugInfo.adjectives.join(', ')}</p>
+                </div>
+                <div className="debug-section">
+                  <h4>Search Query:</h4>
+                  <p>{debugInfo.search_query}</p>
+                </div>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="loading-indicator">Loading GIFs...</div>
+            ) : (
+              <div className="gif-grid">
+                {gifs.map((gif, index) => (
+                  <div key={index} className="gif-container">
+                    <img
+                      src={gif.preview || gif.url}
+                      alt={gif.title || "GIF"}
+                      className="gif-thumbnail"
+                      onClick={() => {
+                        onSendGif(gif.url);
+                        setShowGifPanel(false);
+                        setDebugInfo(null);
+                      }}
+                    />
+                    {gif.similarity && (
+                      <div className="gif-score">
+                        Score: {gif.similarity.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
