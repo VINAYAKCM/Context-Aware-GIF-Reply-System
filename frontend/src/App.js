@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
-import ChatWindow from './components/ChatWindow';
+import IphoneFrame from './components/IphoneFrame';
 
 function App() {
   const [messages1, setMessages1] = useState([]);
@@ -8,55 +8,47 @@ function App() {
   const [lastReceivedMessage1, setLastReceivedMessage1] = useState('');
   const [lastReceivedMessage2, setLastReceivedMessage2] = useState('');
 
-  const handleSendMessage = (windowId, message) => {
-    const newMessage = {
-      content: message,
-      sender: windowId === 1 ? 'User 1' : 'User 2',
-      type: 'text'
-    };
-
-    if (windowId === 1) {
-      setMessages1([...messages1, newMessage]);
-      setMessages2([...messages2, { ...newMessage, sender: 'User 1' }]);
-      setLastReceivedMessage2(message);
-    } else {
-      setMessages2([...messages2, newMessage]);
-      setMessages1([...messages1, { ...newMessage, sender: 'User 2' }]);
-      setLastReceivedMessage1(message);
-    }
+  const handleSendMessage1 = (message) => {
+    const newMessage = { content: message, type: 'text', sender: 'Matt Watkins' };
+    setMessages1([...messages1, newMessage]);
+    setLastReceivedMessage2(message);
   };
 
-  const handleSendGif = (windowId, gifUrl) => {
-    const newMessage = {
-      content: gifUrl,
-      sender: windowId === 1 ? 'User 1' : 'User 2',
-      type: 'gif'
-    };
+  const handleSendMessage2 = (message) => {
+    const newMessage = { content: message, type: 'text', sender: 'Robin Schzacy' };
+    setMessages2([...messages2, newMessage]);
+    setLastReceivedMessage1(message);
+  };
 
-    if (windowId === 1) {
-      setMessages1([...messages1, newMessage]);
-      setMessages2([...messages2, { ...newMessage, sender: 'User 1' }]);
-    } else {
-      setMessages2([...messages2, newMessage]);
-      setMessages1([...messages1, { ...newMessage, sender: 'User 2' }]);
-    }
+  const handleSendGif1 = (gifUrl) => {
+    const newMessage = { content: gifUrl, type: 'gif', sender: 'Matt Watkins' };
+    setMessages1([...messages1, newMessage]);
+    setLastReceivedMessage2('Check out this GIF!');
+  };
+
+  const handleSendGif2 = (gifUrl) => {
+    const newMessage = { content: gifUrl, type: 'gif', sender: 'Robin Schzacy' };
+    setMessages2([...messages2, newMessage]);
+    setLastReceivedMessage1('Check out this GIF!');
   };
 
   return (
     <div className="app">
-      <div className="chat-container">
-        <ChatWindow
-          user="User 1"
+      <div className="iphone-container">
+        <IphoneFrame
+          user="Matt Watkins"
+          otherUser="Robin Schzacy"
           messages={messages1}
-          onSendMessage={(message) => handleSendMessage(1, message)}
-          onSendGif={(gifUrl) => handleSendGif(1, gifUrl)}
+          onSendMessage={handleSendMessage1}
+          onSendGif={handleSendGif1}
           lastReceivedMessage={lastReceivedMessage1}
         />
-        <ChatWindow
-          user="User 2"
+        <IphoneFrame
+          user="Robin Schzacy"
+          otherUser="Matt Watkins"
           messages={messages2}
-          onSendMessage={(message) => handleSendMessage(2, message)}
-          onSendGif={(gifUrl) => handleSendGif(2, gifUrl)}
+          onSendMessage={handleSendMessage2}
+          onSendGif={handleSendGif2}
           lastReceivedMessage={lastReceivedMessage2}
         />
       </div>

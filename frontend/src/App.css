@@ -1,10 +1,10 @@
 .app {
   min-height: 100vh;
-  padding: 20px;
-  background-color: #f0f2f5;
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: #1A1A1A;
+  padding: 20px;
 }
 
 .chat-container {
@@ -42,4 +42,11 @@
     padding: 8px;
     height: auto;
   }
+}
+
+.iphone-container {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  justify-content: center;
 } 
