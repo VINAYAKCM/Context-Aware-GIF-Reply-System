@@ -63,11 +63,21 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
   };
 
   const handleGifSearch = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (searchQuery.trim()) {
       await fetchGifs(searchQuery.trim(), 'search');
     }
   };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery.trim()) {
+        fetchGifs(searchQuery.trim(), 'search');
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const handleInputChange = (e) => {
     const text = e.target.value;
@@ -134,7 +144,6 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
             <div className={`gif-panel ${showGifPanel ? 'show' : ''}`}>
               <div className="gif-search-container">
                 <form onSubmit={handleGifSearch} className="gif-search-form">
-                  <SearchIcon className="search-icon" />
                   <input
                     type="text"
                     value={searchQuery}
@@ -142,6 +151,7 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
                     placeholder="Search GIFs"
                     className="gif-search-input"
                   />
+                  <SearchIcon className="search-icon" />
                 </form>
               </div>
               
