@@ -21,6 +21,18 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    if (showGifPanel) {
+      const delayDebounceFn = setTimeout(() => {
+        if (searchQuery.trim()) {
+          fetchGifs(searchQuery.trim(), 'search');
+        }
+      }, 300); // 300ms delay
+
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [searchQuery, showGifPanel]);
+
   const handleSendMessage = (e) => {
     e?.preventDefault();
     if (message.trim()) {
@@ -62,29 +74,18 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
     setShowGifPanel(!showGifPanel);
   };
 
-  const handleGifSearch = async (e) => {
-    e?.preventDefault();
-    if (searchQuery.trim()) {
-      await fetchGifs(searchQuery.trim(), 'search');
-    }
-  };
-
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery.trim()) {
-        fetchGifs(searchQuery.trim(), 'search');
-      }
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
-
   const handleInputChange = (e) => {
     const text = e.target.value;
     setMessage(text);
     setIsTyping(text.length > 0);
     if (showGifPanel && text.trim()) {
       fetchGifs(text.trim(), 'search');
+    }
+  };
+
+  const handleInputClick = () => {
+    if (showGifPanel) {
+      setShowGifPanel(false);
     }
   };
 
@@ -123,6 +124,7 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
               type="text"
               value={message}
               onChange={handleInputChange}
+              onClick={handleInputClick}
               placeholder="Message"
               className="message-input"
             />
@@ -143,7 +145,7 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
           {showGifPanel && (
             <div className={`gif-panel ${showGifPanel ? 'show' : ''}`}>
               <div className="gif-search-container">
-                <form onSubmit={handleGifSearch} className="gif-search-form">
+                <form onSubmit={(e) => e.preventDefault()} className="gif-search-form">
                   <input
                     type="text"
                     value={searchQuery}
@@ -169,6 +171,7 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
                           onSendGif(gif.url);
                           setShowGifPanel(false);
                           setMessage('');
+                          setSearchQuery('');
                           setIsTyping(false);
                         }}
                       />
