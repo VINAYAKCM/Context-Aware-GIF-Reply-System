@@ -3,32 +3,31 @@ import './App.css';
 import IphoneFrame from './components/IphoneFrame';
 
 function App() {
-  const [messages1, setMessages1] = useState([]);
-  const [messages2, setMessages2] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [lastReceivedMessage1, setLastReceivedMessage1] = useState('');
   const [lastReceivedMessage2, setLastReceivedMessage2] = useState('');
 
   const handleSendMessage1 = (message) => {
     const newMessage = { content: message, type: 'text', sender: 'Matt Watkins' };
-    setMessages1([...messages1, newMessage]);
+    setMessages([...messages, newMessage]);
     setLastReceivedMessage2(message);
   };
 
   const handleSendMessage2 = (message) => {
     const newMessage = { content: message, type: 'text', sender: 'Robin Schzacy' };
-    setMessages2([...messages2, newMessage]);
+    setMessages([...messages, newMessage]);
     setLastReceivedMessage1(message);
   };
 
   const handleSendGif1 = (gifUrl) => {
     const newMessage = { content: gifUrl, type: 'gif', sender: 'Matt Watkins' };
-    setMessages1([...messages1, newMessage]);
+    setMessages([...messages, newMessage]);
     setLastReceivedMessage2('Check out this GIF!');
   };
 
   const handleSendGif2 = (gifUrl) => {
     const newMessage = { content: gifUrl, type: 'gif', sender: 'Robin Schzacy' };
-    setMessages2([...messages2, newMessage]);
+    setMessages([...messages, newMessage]);
     setLastReceivedMessage1('Check out this GIF!');
   };
 
@@ -38,7 +37,7 @@ function App() {
         <IphoneFrame
           user="Matt Watkins"
           otherUser="Robin Schzacy"
-          messages={messages1}
+          messages={messages}
           onSendMessage={handleSendMessage1}
           onSendGif={handleSendGif1}
           lastReceivedMessage={lastReceivedMessage1}
@@ -46,7 +45,7 @@ function App() {
         <IphoneFrame
           user="Robin Schzacy"
           otherUser="Matt Watkins"
-          messages={messages2}
+          messages={messages}
           onSendMessage={handleSendMessage2}
           onSendGif={handleSendGif2}
           lastReceivedMessage={lastReceivedMessage2}
