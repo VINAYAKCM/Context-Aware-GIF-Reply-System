@@ -55,7 +55,14 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
   const handleSendMessage = (e) => {
     e?.preventDefault();
     if (message.trim()) {
-      onSendMessage(message);
+      onSendMessage({
+        content: message,
+        timestamp: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: true
+        }).toLowerCase()
+      });
       setMessage('');
       setIsTyping(false);
       setShowGifPanel(false);
@@ -165,13 +172,16 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`message ${msg.sender === user ? 'sent' : 'received'}`}
+              className={`message-wrapper ${msg.sender === user ? 'sent' : 'received'}`}
             >
-              {msg.type === 'gif' ? (
-                <img src={msg.content} alt="GIF" className="gif-preview" />
-              ) : (
-                <p>{msg.content}</p>
-              )}
+              <div className={`message ${msg.sender === user ? 'sent' : 'received'} ${msg.type === 'gif' ? 'gif' : ''}`}>
+                {msg.type === 'gif' ? (
+                  <img src={msg.content} alt="GIF" className="gif-preview" />
+                ) : (
+                  <p className="message-content">{msg.content}</p>
+                )}
+              </div>
+              <span className="message-timestamp">{msg.timestamp || '9:41 am'}</span>
             </div>
           ))}
           <div ref={messagesEndRef} />
