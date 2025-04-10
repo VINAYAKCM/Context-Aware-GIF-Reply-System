@@ -5,10 +5,12 @@
   background-color: #0D0D0F;
   overflow: hidden;
   padding-top: 32px; /* Space for notch */
+  position: relative;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .chat-header {
-  padding: 6px 16px 16px 16px; /* Increased bottom padding to 20px */
+  padding: 12px 16px 16px 16px; /* Increased bottom padding to 20px */
   margin: 0 -8px; /* Negative margin to extend border */
   background-color: #0D0D0F;
   display: flex;
@@ -20,7 +22,6 @@
 .back-button {
   background: none;
   border: none;
-  color: #D9D9D9;
   cursor: pointer;
   margin-left: 4px;
   padding: 4px;
@@ -39,13 +40,14 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #D9D9D9;
+  object-fit: cover;
 }
 
 .profile-name {
-  color: #D9D9D9;
-  font-size: 16px;
-  font-weight: 500;
+  color: #c5c5c5;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .messages-container {
@@ -65,6 +67,7 @@
   word-wrap: break-word;
   font-size: 14px;
   margin: 2px 0;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .message.sent {
@@ -118,6 +121,7 @@
   font-size: 14px;
   outline: none;
   transition: all 0.3s ease;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .gif-button {
@@ -130,6 +134,7 @@
   cursor: pointer;
   font-size: 14px;
   transition: all 0.3s ease;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .message-form.typing .gif-button {
@@ -197,6 +202,7 @@
   color: white;
   font-size: 14px;
   outline: none;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .search-icon {
@@ -324,4 +330,45 @@
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+}
+
+.status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 4;
+  height: 44px;
+  box-sizing: border-box;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.status-bar-time {
+  position: absolute;
+  left: 32px;
+  letter-spacing: -0.5px;
+}
+
+.status-bar-icons {
+  position: absolute;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signal-icon, .wifi-icon, .battery-icon {
+  display: block;
+}
+
+.status-bar-icon {
+  display: flex;
+  align-items: center;
 } 

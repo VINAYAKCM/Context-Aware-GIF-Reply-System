@@ -8,25 +8,25 @@ function App() {
   const [lastReceivedMessage2, setLastReceivedMessage2] = useState('');
 
   const handleSendMessage1 = (message) => {
-    const newMessage = { content: message, type: 'text', sender: 'Matt Watkins' };
+    const newMessage = { content: message, type: 'text', sender: 'Robin Schzacy' };
     setMessages([...messages, newMessage]);
     setLastReceivedMessage2(message);
   };
 
   const handleSendMessage2 = (message) => {
-    const newMessage = { content: message, type: 'text', sender: 'Robin Schzacy' };
+    const newMessage = { content: message, type: 'text', sender: 'Matt Willkins' };
     setMessages([...messages, newMessage]);
     setLastReceivedMessage1(message);
   };
 
   const handleSendGif1 = (gifUrl) => {
-    const newMessage = { content: gifUrl, type: 'gif', sender: 'Matt Watkins' };
+    const newMessage = { content: gifUrl, type: 'gif', sender: 'Robin Schzacy' };
     setMessages([...messages, newMessage]);
     setLastReceivedMessage2('Check out this GIF!');
   };
 
   const handleSendGif2 = (gifUrl) => {
-    const newMessage = { content: gifUrl, type: 'gif', sender: 'Robin Schzacy' };
+    const newMessage = { content: gifUrl, type: 'gif', sender: 'Matt Willkins' };
     setMessages([...messages, newMessage]);
     setLastReceivedMessage1('Check out this GIF!');
   };
@@ -35,16 +35,16 @@ function App() {
     <div className="app">
       <div className="iphone-container">
         <IphoneFrame
-          user="Matt Watkins"
-          otherUser="Robin Schzacy"
+          user="Robin Schzacy"
+          otherUser="Matt Willkins"
           messages={messages}
           onSendMessage={handleSendMessage1}
           onSendGif={handleSendGif1}
           lastReceivedMessage={lastReceivedMessage1}
         />
         <IphoneFrame
-          user="Robin Schzacy"
-          otherUser="Matt Watkins"
+          user="Matt Willkins"
+          otherUser="Robin Schzacy"
           messages={messages}
           onSendMessage={handleSendMessage2}
           onSendGif={handleSendGif2}
