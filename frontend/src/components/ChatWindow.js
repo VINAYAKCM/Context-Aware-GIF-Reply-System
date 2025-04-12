@@ -20,12 +20,26 @@ const ChatWindow = ({ user, otherUser, messages, onSendMessage, onSendGif, lastR
   const [currentTime, setCurrentTime] = useState('9:41');
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: "smooth",
+        block: "end",
+        inline: "nearest"
+      });
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const messagesContainer = document.querySelector('.messages-container');
+    if (messagesContainer) {
+      messagesContainer.style.WebkitOverflowScrolling = 'touch';
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }, []);
 
   useEffect(() => {
     if (showGifPanel) {

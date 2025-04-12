@@ -50,14 +50,51 @@
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.messages-container {
+.chat-content {
+  padding: 0 8px;
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 140px); /* Adjust for header and status bar */
+  position: relative;
+}
+
+.messages-container {
+  flex: 1;
   padding: 16px;
-  overflow-y: auto;
+  overflow-y: scroll;
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 8px;
+  position: relative;
+  height: calc(100% - 80px); /* Account for input container */
+  -ms-overflow-style: none;  /* Hide scrollbar for IE and Edge */
+  scrollbar-width: none;     /* Hide scrollbar for Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.messages-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Show scrollbar only when hovering/scrolling */
+.messages-container:hover::-webkit-scrollbar {
+  display: block;
+  width: 4px;
+}
+
+.messages-container:hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-container:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.messages-container:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 .message-wrapper {
@@ -125,8 +162,8 @@
   padding: 8px 8px 16px 8px;
   background-color: #0D0D0F;
   position: relative;
-  margin-bottom: 8px;
-  z-index: 3; /* Higher z-index to stay above GIF panel */
+  z-index: 3;
+  margin-top: auto;
 }
 
 .message-form {
@@ -403,4 +440,24 @@
 .status-bar-icon {
   display: flex;
   align-items: center;
+}
+
+/* Customize scrollbar for better visibility */
+.messages-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 } 
